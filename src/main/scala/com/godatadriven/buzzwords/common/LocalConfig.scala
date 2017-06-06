@@ -16,10 +16,19 @@
  * limitations under the License.
  */
 
-package com.godatadriven.buzzwords
+package com.godatadriven.buzzwords.common
 
-object Parameters {
-  val skillDistributionBuckets = 20
-  val queueBuckets = 1
-  val playersPerMatch = 2
+import org.apache.flink.configuration.{Configuration, JobManagerOptions}
+
+object LocalConfig {
+  def getFlinkConfig: Configuration = {
+    val config = new Configuration()
+
+    config.setString(JobManagerOptions.ADDRESS, "localhost")
+    config.setInteger(JobManagerOptions.PORT, 6123)
+
+    config
+  }
+
+  val keyStateName = "playerSkill"
 }

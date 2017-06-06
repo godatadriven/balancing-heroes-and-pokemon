@@ -18,9 +18,14 @@
 
 package com.godatadriven.buzzwords.operators
 
+import breeze.linalg.sum
+import org.scalactic.TolerantNumerics
 import org.scalatest.FlatSpec
 
 class SamplePlayerSkillTest extends FlatSpec {
+
+  val epsilon = 1e-2f
+  private implicit val doubleEq = TolerantNumerics.tolerantDoubleEquality(epsilon)
 
   import SamplePlayerSkill._
 
@@ -37,5 +42,9 @@ class SamplePlayerSkillTest extends FlatSpec {
     )
 
     assert(determineHighestBucket(buckets) == 4)
+  }
+
+  "The default player distribution" should "be normalized to one" in {
+    assert(sum(initSkillDistributionBuckets) === 1.0)
   }
 }

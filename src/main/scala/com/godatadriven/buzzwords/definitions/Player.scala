@@ -18,4 +18,4 @@
 
 package com.godatadriven.buzzwords.definitions
 
-case class Player(player: Int, character: String) extends Definition
+case class Player(id: Long, character: String) extends Definition

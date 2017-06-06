@@ -28,7 +28,6 @@ class SocketHeroesStreamingTest extends FlatSpec {
 
   "The Heroer Streaming Pipeline" should "give a suggestion of a team" in {
 
-
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
     val dataStream = env.fromCollection[String](List(
@@ -51,9 +50,8 @@ class SocketHeroesStreamingTest extends FlatSpec {
       """{"player":901, "character":"Arthas"}"""
     ))
 
-    SocketHeroesStreaming.start(dataStream).print()
+    SocketHeroesStreaming.start(dataStream)
 
     env.execute("SocketHeroesStreamingTest")
-
   }
 }

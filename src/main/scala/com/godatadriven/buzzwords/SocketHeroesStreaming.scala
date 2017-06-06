@@ -18,10 +18,14 @@
 
 package com.godatadriven.buzzwords
 
-import com.godatadriven.buzzwords.common.JsonUtil
-import com.godatadriven.buzzwords.definitions.Player
+import com.godatadriven.buzzwords.common.{JsonUtil, LocalConfig}
+import com.godatadriven.buzzwords.definitions.{Player, UpdateStep}
 import com.godatadriven.buzzwords.operators._
+import com.godatadriven.buzzwords.sources.PlayerGenerator
 import org.apache.flink.api.common.ExecutionConfig
+import org.apache.flink.api.common.state.FoldingStateDescriptor
+import org.apache.flink.api.common.typeinfo.{TypeHint, TypeInformation}
+import org.apache.flink.streaming.api.datastream.QueryableStateStream
 import org.apache.flink.streaming.api.scala._
 
 object SocketHeroesStreaming {
@@ -33,38 +37,49 @@ object SocketHeroesStreaming {
   def main(args: Array[String]) {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
-    start(env.socketTextStream(hostName, port)).print()
+    start(
+      env.addSource(new PlayerGenerator)
+    )
 
     env.execute("SocketHeroesStreaming")
   }
 
-  def start(stream: DataStream[String]): DataStream[String] = stream
+  def start(stream: DataStream[String]): QueryableStateStream[Long, Array[Double]] = {
 
-    // Parse the JSON to a case class
-    .map(line => JsonUtil.parseJson[Player](line))
+    val reduceStateDescriptor = new FoldingStateDescriptor[UpdateStep, Array[Double]](
+      LocalConfig.keyStateName,
+      SamplePlayerSkill.initSkillDistributionBuckets.toArray,
+      new UpdatePlayerSkill,
+      TypeInformation.of(new TypeHint[Array[Double]]() {})
+    )
 
-    // Take the player as a key
-    .keyBy(_.player)
+    stream
 
-    // Sample the historical skill of the player, if available
-    .map(new SamplePlayerSkill)
+      // Parse the JSON to a case class
+      .map(line => JsonUtil.parseJson[Player](line))
 
-    // Take the bucket as the key
-    .keyBy(_._1)
+      // Sample the historical skill of the player, if available
+      .map(new SamplePlayerSkill)
 
-    // Wait until there are ten players in the bucket
-    .countWindow(Parameters.teamSize)
+      // Take the queue bucket as the key
+      .keyBy(_._1)
 
-    // Determine the two teams of five players
-    .apply(new DetermineTeam)
+      // TODO: Maybe see if we can get unique heroes in a team
 
-    // Play the actual game, this irl this won't be part of the pipeline
-    .map(new PlayGame)
+      // Wait until there are ten players in the bucket
+      .countWindow(Parameters.playersPerMatch)
 
-    // Map the game into player
-    .flatMap(new ComputeNewPlayerSkill)
+      // Determine the two teams of players
+      .apply(new DetermineTeam)
 
-    .keyBy(_._1.player)
+      // Play the actual game, this irl this won't be part of the pipeline
+      .map(new PlayGame)
 
-    .map(new UpdatePlayerSkill)
+      // Map the game into player
+      .flatMap(new ComputeNewPlayerSkill)
+
+      .keyBy(_.player.id)
+
+      .asQueryableState(LocalConfig.keyStateName, reduceStateDescriptor)
+  }
 }

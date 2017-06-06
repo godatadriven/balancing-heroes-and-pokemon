@@ -16,10 +16,17 @@
  * limitations under the License.
  */
 
-package com.godatadriven.buzzwords
+package com.godatadriven.buzzwords.operators
 
-object Parameters {
-  val skillDistributionBuckets = 20
-  val queueBuckets = 1
-  val playersPerMatch = 2
+import org.scalatest.FlatSpec
+
+class DetermineTeamTest extends FlatSpec {
+
+
+  "After combining a team" should "the team skill distribution should be averaged" in {
+//List[((Int, Player, Array[Double]), Int)]
+//    DetermineTeam.computeTeamDistribution(
+//      (1, )
+//    )
+  }
 }

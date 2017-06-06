@@ -19,11 +19,16 @@
 package com.godatadriven.buzzwords.common
 
 import com.godatadriven.buzzwords.definitions.Definition
-import org.json4s.DefaultFormats
+import org.json4s.{DefaultFormats, Extraction}
 import org.json4s.jackson.JsonMethods._
 
 object JsonUtil {
   implicit val formats = DefaultFormats
 
   def parseJson[T <: Definition](json: String)(implicit x$1: Manifest[T]): T = parse(json).extract[T]
+
+  def toJson(clazz: AnyRef): String = {
+    val res = Extraction.decompose(clazz)
+    compact(render(res))
+  }
 }

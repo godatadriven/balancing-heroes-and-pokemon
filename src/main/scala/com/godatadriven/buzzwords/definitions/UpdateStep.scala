@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 
-package com.godatadriven.buzzwords
+package com.godatadriven.buzzwords.definitions
 
-object Parameters {
-  val skillDistributionBuckets = 20
-  val queueBuckets = 1
-  val playersPerMatch = 2
-}
+import breeze.linalg.DenseVector
+
+case class UpdateStep(player: Player, won: Boolean, opponentDistribution: DenseVector[Double]) extends Definition

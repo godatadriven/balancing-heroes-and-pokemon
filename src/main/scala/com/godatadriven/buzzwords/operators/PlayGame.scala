@@ -26,17 +26,22 @@ class PlayGame extends MapFunction[Team, Game] {
 
   private def determineScore(players: Iterable[Player]) = {
     // The skill of the player is embedded in the id :-)
-    val playerSkill = players.map(player => (player.player % 100) / 100).sum
+
+    // 0.02 + 0.20 + 0.5 + 0.7 + 0.9 + 2.32
+    val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
 
     // Add a bit of randomness
-    playerSkill + Math.random() / 10
+    playerSkill //+ Math.random() / 10
   }
 
   override def map(team: Team): Game = {
     val scoreA = determineScore(team.firstTeam._1)
     val scoreB = determineScore(team.secondTeam._1)
 
-    val flip = Math.random() < (scoreA / (scoreA + scoreB))
+    //val flip = Math.random() < (scoreA / (scoreA + scoreB))
+    val flip = scoreA >= scoreB
+
+    println(s"Playing game of ${team.firstTeam._1.mkString(",")} vs ${team.secondTeam._1.mkString(",")}")
 
     Game(
       // Winning team

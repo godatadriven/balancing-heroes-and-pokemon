@@ -22,6 +22,8 @@ val flinkDependencies = Seq(
 
   "org.scalanlp" %% "breeze" % "0.13.1",
 
+  "org.scalaj" %% "scalaj-http" % "2.3.0",
+
   "org.scalactic" %% "scalactic" % "3.0.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 )
@@ -36,3 +38,6 @@ run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in(Compi
 
 // exclude Scala library from assembly
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
+
+// Assembly configurations
+Keys.test in assembly := {}

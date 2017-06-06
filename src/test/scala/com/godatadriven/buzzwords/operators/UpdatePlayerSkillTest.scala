@@ -26,6 +26,8 @@ class UpdatePlayerSkillTest extends FlatSpec {
 
   import UpdatePlayerSkill._
 
+  import breeze.linalg._
+
   "The player skill update step" should "correctly update the player skill distribution" in {
     val playerOne = DenseVector[Double](1.0, 2.0, 3.0)
     val playerTwo = DenseVector[Double](3.0, 2.0, 1.0)
@@ -57,33 +59,46 @@ class UpdatePlayerSkillTest extends FlatSpec {
 
     val marginalsOne = getMarginals(matOne)
 
-    assert(marginalsOne == DenseVector(6.0, 12.0, 18.0))
+    assert(marginalsOne == (DenseVector(18.0, 12.0, 6.0), DenseVector(6.0, 12.0, 18.0)))
 
     // The other way around
     val marginalsTwo = getMarginals(matTwo)
 
-    assert(marginalsTwo == DenseVector(18.0, 12.0, 6.0))
+    assert(marginalsTwo == (DenseVector(6.0, 12.0, 18.0), DenseVector(18.0, 12.0, 6.0)))
   }
 
 
   "After performing the player update step" should "the bucket should increase" in {
-    val losing = DenseVector(SamplePlayerSkill.initSkillDistributionBuckets)
+    val losing = SamplePlayerSkill.initSkillDistributionBuckets
 
-    val prevPlayerSkill = DenseVector(SamplePlayerSkill.initSkillDistributionBuckets)
+    val prevPlayerSkill = SamplePlayerSkill.initSkillDistributionBuckets
 
     val matPrior = getPrior(losing, prevPlayerSkill)
 
     val matPosterior = cutMatrix(matPrior)
 
-    val nextPlayerSkill = getMarginals(matPosterior)
+    // In case of win
+    val nextPlayerSkill = getMarginals(matPosterior)._1
 
     val prevBucket = SamplePlayerSkill.determineHighestBucket(prevPlayerSkill.toArray)
     val nextBucket = SamplePlayerSkill.determineHighestBucket(nextPlayerSkill.toArray)
 
-    println(prevPlayerSkill)
-    println(nextPlayerSkill)
+    println(s"Went to: $prevBucket -> $nextBucket")
 
     assert(prevBucket < nextBucket)
+  }
+
+  "When constructing the matrix" should "be give the original vectors back" in {
+    val vec1 = DenseVector(1.0, 2.0, 3.0, 4.0, 5.0)
+    val vec2 = DenseVector(5.0, 6.0, 7.0, 8.0, 9.0)
+
+    val normVec = vec1 /:/ sum(vec1)
+
+    val mat = vec1.toDenseMatrix.t * vec2.toDenseMatrix
+
+    assert(sum(mat(*, ::)) /:/ sum(sum(mat(*, ::))) == normVec)
+
+
   }
 
 }

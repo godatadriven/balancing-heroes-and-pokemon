@@ -18,56 +18,73 @@
 
 package com.godatadriven.buzzwords.operators
 
-import breeze.linalg.{*, DenseMatrix, DenseVector, sum, upperTriangular}
-import com.godatadriven.buzzwords.definitions.Player
+import com.godatadriven.buzzwords.definitions.UpdateStep
+import org.apache.flink.api.common.functions.FoldFunction
+import org.slf4j.LoggerFactory
 
+import breeze.linalg._
 
 object UpdatePlayerSkill {
-  def getPrior(arr1: DenseVector[Double], arr2: DenseVector[Double]): DenseMatrix[Double] =
-    arr1.toDenseMatrix.t * arr2.toDenseMatrix
+
+  def getPrior(loser: DenseVector[Double], winner: DenseVector[Double]): DenseMatrix[Double] =
+    loser.toDenseMatrix.t * winner.toDenseMatrix
 
   def cutMatrix(mat: DenseMatrix[Double]): DenseMatrix[Double] = {
     val posterior = upperTriangular(mat) + 0.000001
     posterior /:/ sum(posterior)
   }
 
-  def getMarginals(posteriorMat: DenseMatrix[Double]): DenseVector[Double] = sum(posteriorMat.t(*, ::))
+  def getMarginals(posteriorMat: DenseMatrix[Double]): (DenseVector[Double], DenseVector[Double]) = {
+    val winner = sum(posteriorMat, Axis._0).t
+    val losing = sum(posteriorMat, Axis._1)
+
+    (winner /:/ sum(winner), losing /:/ sum(losing))
+  }
 }
 
-class UpdatePlayerSkill extends StatefulPlayerOperation[(Player, Boolean, DenseVector[Double]), String] {
+class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   import UpdatePlayerSkill._
 
-  override def map(gameResult: (Player, Boolean, DenseVector[Double])): String = {
+  override def fold(prevPlayerSkillAcc: Array[Double], value: UpdateStep): Array[Double] = {
 
-    var rawPlayerSkill = playerSkill.value()
+    val prevPlayerSkill = DenseVector[Double](prevPlayerSkillAcc)
 
-    if (rawPlayerSkill == null) {
-      rawPlayerSkill = SamplePlayerSkill.initSkillDistributionBuckets
-    }
-
-    val prevPlayerSkill = DenseVector(rawPlayerSkill)
-
-    // Check if won
-    val matPrior = if (gameResult._2) {
-      getPrior(gameResult._3, prevPlayerSkill)
+    val matPrior = if (value.won) {
+      getPrior(value.opponentDistribution, prevPlayerSkill)
     } else {
-      getPrior(prevPlayerSkill, gameResult._3)
+      getPrior(prevPlayerSkill, value.opponentDistribution)
     }
 
     val matPosterior = cutMatrix(matPrior)
 
-    val nextPlayerSkill = getMarginals(matPosterior)
+    val margins = getMarginals(matPosterior)
 
-    playerSkill.update(nextPlayerSkill.toArray)
 
+    //logger.warn("Posterior: " + matPosterior.toArray.mkString(","))
+
+    // Check if won
+    val nextPlayerSkill = if (value.won) {
+      margins._1
+    } else {
+      margins._2
+    }
     val prevBucket = SamplePlayerSkill.determineHighestBucket(prevPlayerSkill.toArray)
     val nextBucket = SamplePlayerSkill.determineHighestBucket(nextPlayerSkill.toArray)
 
-    if (gameResult._2) {
-      s"Player #${gameResult._1.player} has won, and went from bucket $prevBucket to $nextBucket"
+    val log = if (value.won) {
+      s"Player #${value.player.id} has won, and went from bucket $prevBucket to $nextBucket"
     } else {
-      s"Player #${gameResult._1.player} has lost, and went from bucket $prevBucket to $nextBucket"
+      s"Player #${value.player.id} has lost, and went from bucket $prevBucket to $nextBucket"
     }
+
+    //  if (List(2, 20, 50, 70, 90).contains(value.player.id)) {
+    println(log)
+    println(prevPlayerSkillAcc.mkString(","))
+
+    //}
+
+    nextPlayerSkill.toArray
   }
 }

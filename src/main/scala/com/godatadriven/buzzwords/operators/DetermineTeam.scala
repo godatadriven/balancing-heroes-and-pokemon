@@ -25,14 +25,18 @@ import org.apache.flink.streaming.api.windowing.windows.GlobalWindow
 import org.apache.flink.util.Collector
 import breeze.linalg._
 
-class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, Int, GlobalWindow] {
+object DetermineTeam {
   private val emptyDist = DenseVector.zeros[Double](Parameters.skillDistributionBuckets)
 
-  private def computeTeamDistribution(rawTeam: List[((Int, Player, Array[Double]), Int)]): (Set[Player], DenseVector[Double]) =
-    rawTeam.map {
-      case ((playerId: Int, playerCharacter: Player, playerSkill: Array[Double]), _: Int) => (playerCharacter, new DenseVector(playerSkill))
-    }.foldLeft((Set[Player](), emptyDist))((team, player) => (team._1 + player._1, team._2 + (team._2 /:/ rawTeam.size.toDouble)))
+  def computeTeamDistribution(rawTeam: List[(Player, DenseVector[Double])]): (Set[Player], DenseVector[Double]) =
+    rawTeam.foldLeft((Set[Player](), emptyDist))((team, player) =>
+      (team._1 + player._1, team._2 + (player._2 /:/ rawTeam.size.toDouble))
+    ) // TODO: Normalise to zero
+}
 
+class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, Int, GlobalWindow] {
+
+  import DetermineTeam._
 
   override def apply(key: Int, window: GlobalWindow, players: Iterable[(Int, Player, Array[Double])], out: Collector[Team]): Unit = {
 
@@ -43,6 +47,8 @@ class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, I
       .sortBy(player => Heroes.heroes(player._2.character))
       .zipWithIndex
       .groupBy(_._2 % 2 == 0)
+      // Map so we only take the essentials we need and get rid of all the indexes etc
+      .mapValues(_.map(player => (player._1._2, new DenseVector[Double](player._1._3))))
 
     val firstTeam = computeTeamDistribution(teams(true))
     val secondTeam = computeTeamDistribution(teams(false))

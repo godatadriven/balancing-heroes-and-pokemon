@@ -18,20 +18,18 @@
 
 package com.godatadriven.buzzwords.operators
 
-import breeze.linalg._
-import com.godatadriven.buzzwords.definitions.{Game, Player}
+import com.godatadriven.buzzwords.definitions.{Game, UpdateStep}
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.util.Collector
 
-class ComputeNewPlayerSkill extends FlatMapFunction[Game, (Player, Boolean, DenseVector[Double])] {
-
-  override def flatMap(value: Game, out: Collector[(Player, Boolean, DenseVector[Double])]): Unit = {
+class ComputeNewPlayerSkill extends FlatMapFunction[Game, UpdateStep] {
+  override def flatMap(value: Game, out: Collector[UpdateStep]): Unit = {
     // Cut the game up in players and emit them
     for (player <- value.winning._1) {
-      out.collect((player, true, value.losing._2))
+      out.collect(UpdateStep(player, won = true, value.losing._2))
     }
     for (player <- value.losing._1) {
-      out.collect((player, false, value.winning._2))
+      out.collect(UpdateStep(player, won = false, value.winning._2))
     }
   }
 }
