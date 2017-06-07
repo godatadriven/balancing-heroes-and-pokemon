@@ -23,13 +23,13 @@ import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.util.Collector
 
 class ComputeNewPlayerSkill extends FlatMapFunction[Game, UpdateStep] {
-  override def flatMap(value: Game, out: Collector[UpdateStep]): Unit = {
+  override def flatMap(game: Game, out: Collector[UpdateStep]): Unit = {
     // Cut the game up in players and emit them
-    for (player <- value.winning._1) {
-      out.collect(UpdateStep(player, won = true, value.losing._2))
+    for (player <- game.winning._1) {
+      out.collect(UpdateStep(player, won = true, game.losing._2, game.queueBucket))
     }
-    for (player <- value.losing._1) {
-      out.collect(UpdateStep(player, won = false, value.winning._2))
+    for (player <- game.losing._1) {
+      out.collect(UpdateStep(player, won = false, game.winning._2, game.queueBucket))
     }
   }
 }

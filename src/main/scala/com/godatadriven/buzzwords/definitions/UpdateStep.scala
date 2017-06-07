@@ -20,4 +20,7 @@ package com.godatadriven.buzzwords.definitions
 
 import breeze.linalg.DenseVector
 
-case class UpdateStep(player: Player, won: Boolean, opponentDistribution: DenseVector[Double]) extends Definition
+case class UpdateStep(player: Player,
+                      won: Boolean,
+                      opponentDistribution: DenseVector[Double],
+                      queuebucker: Int) extends Definition

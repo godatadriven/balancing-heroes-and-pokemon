@@ -19,6 +19,8 @@
 package com.godatadriven.buzzwords.operators
 
 import breeze.linalg._
+import breeze.stats._
+import com.godatadriven.buzzwords.common.LocalConfig
 import com.godatadriven.buzzwords.definitions.UpdateStep
 import org.apache.flink.api.common.functions.FoldFunction
 
@@ -40,22 +42,44 @@ object UpdatePlayerSkill {
   }
 }
 
+//val highestBucketOpponent = SamplePlayerSkill.determineHighestBucket(value.opponentDistribution.toArray)
+//val ratio = LocalConfig.skillDistributionBuckets.toDouble / LocalConfig.skillDistributionBuckets.toDouble
+//  val centerBucketQueue = (value.queuebucker * ratio) + (ratio / 2.0)
+
 class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
+  private val SAMPLES = 10000000
 
   import UpdatePlayerSkill._
 
   override def fold(prevPlayerSkillAcc: Array[Double], value: UpdateStep): Array[Double] = {
-
     val prevPlayerSkill = DenseVector[Double](prevPlayerSkillAcc)
 
+    // Generate a normal distribution, half width of total distribution
+    val bucketDist = DenseVector.ones[Double](LocalConfig.skillDistributionBuckets)
+    val g = breeze.stats.distributions.Gaussian(0, 1)
+    val normalDist = hist(g.sample(SAMPLES), LocalConfig.skillDistributionBuckets / 2).hist
+
+    // Find the centre skill of the other team
+    val opponentSkillCenter = SamplePlayerSkill.determineHighestBucket(value.opponentDistribution.toArray)
+
+    var pos = 0
+    for (idx <- 0 until LocalConfig.skillDistributionBuckets) {
+      if (idx >= (opponentSkillCenter - (normalDist.length / 2)) && idx <= (opponentSkillCenter + (normalDist.length / 2))) {
+        bucketDist(idx) = normalDist(pos)
+        pos = pos + 1
+      }
+    }
+
+    // Normalise it
+    bucketDist /:/ sum(bucketDist)
+    // Build the prior matrix based on the game
     val matPrior = if (value.won) {
-      getPrior(value.opponentDistribution, prevPlayerSkill)
+      getPrior(bucketDist, prevPlayerSkill)
     } else {
-      getPrior(prevPlayerSkill, value.opponentDistribution)
+      getPrior(prevPlayerSkill, bucketDist)
     }
 
     val matPosterior = cutMatrix(matPrior)
-
     val margins = getMarginals(matPosterior)
 
     // Check if won
@@ -73,11 +97,12 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
     } else {
       s"Player #${value.player.id} has lost, and went from bucket $prevBucket to $nextBucket"
     }
-
-    // Dump it to a file
     import java.io._
-    val file = new File(s"/tmp/player-${value.player.id}.csv")
-    val bw = new FileWriter(file, true)
+    val bw2 = new FileWriter(new File(s"/tmp/player-update-${value.player.id}.csv"), true)
+    bw2.write(bucketDist.toArray.mkString(",") + "\n")
+    bw2.close()
+    import java.io._
+    val bw = new FileWriter(new File(s"/tmp/player-${value.player.id}.csv"), true)
     bw.write(prevPlayerSkill.toArray.mkString(",") + "\n")
     bw.close()
 

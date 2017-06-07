@@ -23,16 +23,6 @@ import org.apache.flink.api.common.functions.MapFunction
 
 // This function simulates the outcome of the game, irl this would be an actual game
 class PlayGame extends MapFunction[Team, Game] {
-  //
-  //  private def determineScore(players: Iterable[Player]) = {
-  //    // The skill of the player is embedded in the id :-)
-  //
-  //    // 0.02 + 0.20 + 0.5 + 0.7 + 0.9 + 2.32
-  //    val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
-  //
-  //    // Add a bit of randomness
-  //    playerSkill //+ Math.random() / 10
-  //  }
 
   override def map(team: Team): Game = {
     val scoreA = determineScore(team.firstTeam._1)
@@ -53,19 +43,31 @@ class PlayGame extends MapFunction[Team, Game] {
       if (flip) team.firstTeam else team.secondTeam,
 
       // Losing team
-      if (flip) team.secondTeam else team.firstTeam
+      if (flip) team.secondTeam else team.firstTeam,
+
+      // Keep track of the bucket
+      team.queueBucket
     )
   }
 
   private def determineScore(players: Iterable[Player]) = {
     // The skill of the player is embedded in the id :-)
-
-    // 0.02 + 0.20 + 0.5 + 0.7 + 0.9 + 2.32
-
-    val playerSkill = players.map(_.id).max
-    //val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
+    val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
+    // val playerSkill = players.map(_.id).max
 
     // Add a bit of randomness
-    playerSkill //+ Math.random() / 10
+    playerSkill // + Math.random() / 10
   }
+
+  //  private def determineScore(players: Iterable[Player]) = {
+  //    // The skill of the player is embedded in the id :-)
+  //
+  //    // 0.02 + 0.20 + 0.5 + 0.7 + 0.9 + 2.32
+  //
+  //    val playerSkill = players.map(_.id).max
+  //    //val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
+  //
+  //    // Add a bit of randomness
+  //    playerSkill //+ Math.random() / 10
+  //  }
 }

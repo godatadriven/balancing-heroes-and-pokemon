@@ -20,4 +20,6 @@ package com.godatadriven.buzzwords.definitions
 
 import breeze.linalg.DenseVector
 
-case class Game(winning: (Set[Player], DenseVector[Double]), losing: (Set[Player], DenseVector[Double])) extends Definition
+case class Game(winning: (Set[Player], DenseVector[Double]),
+                losing: (Set[Player], DenseVector[Double]),
+                queueBucket: Int) extends Definition

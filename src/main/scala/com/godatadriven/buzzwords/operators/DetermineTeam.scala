@@ -30,8 +30,8 @@ object DetermineTeam {
   private val emptyDist = DenseVector.zeros[Double](LocalConfig.skillDistributionBuckets)
 
   def computeTeamDistribution(rawTeam: List[(Player, DenseVector[Double])]): (Set[Player], DenseVector[Double]) =
-    rawTeam.foldLeft((Set[Player](), emptyDist))((team, player) =>
-      (team._1 + player._1, team._2 + (player._2 /:/ rawTeam.size.toDouble))
+    rawTeam.foldLeft((Set[Player](), emptyDist))(
+      (team, player) => (team._1 + player._1, team._2 + (player._2 /:/ rawTeam.size.toDouble))
     )
 }
 
@@ -39,7 +39,7 @@ class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, I
 
   import DetermineTeam._
 
-  override def apply(key: Int, window: GlobalWindow, players: Iterable[(Int, Player, Array[Double])], out: Collector[Team]): Unit = {
+  override def apply(queueBucket: Int, window: GlobalWindow, players: Iterable[(Int, Player, Array[Double])], out: Collector[Team]): Unit = {
 
     // Sort the team by the type of character, so we get mixed teams
     val teams = players
@@ -54,6 +54,6 @@ class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, I
     val firstTeam = computeTeamDistribution(teams(true))
     val secondTeam = computeTeamDistribution(teams(false))
 
-    out.collect(Team(firstTeam, secondTeam))
+    out.collect(Team(firstTeam, secondTeam, queueBucket))
   }
 }

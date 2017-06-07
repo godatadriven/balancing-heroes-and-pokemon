@@ -36,7 +36,7 @@ class PlayerGenerator extends SourceFunction[String] {
   override def run(ctx: SourceFunction.SourceContext[String]): Unit = {
     val heroes = Heroes.heroes.keys.size
 
-    val numberPlayers = 100
+    val numberPlayers = 99
 
     while (true) {
       val playerId = rand.nextInt(numberPlayers)

@@ -19,6 +19,7 @@
 package com.godatadriven.buzzwords.operators
 
 import breeze.linalg.sum
+import com.godatadriven.buzzwords.common.LocalConfig
 import org.scalactic.TolerantNumerics
 import org.scalatest.FlatSpec
 
@@ -29,20 +30,7 @@ class SamplePlayerSkillTest extends FlatSpec {
 
   import SamplePlayerSkill._
 
-  "The sampling of the player" should "should pick the highest bucket" in {
-    val buckets = Array(
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      2.0,
-      0.0,
-      0.0,
-      0.0
-    )
-
-    assert(determineHighestBucket(buckets) == 4)
-
+  "The sampling of the player" should "pick the highest bucket" in {
     val dist = Array(
       .322772211553224E-5,
       2.4528958113356387E-5,
@@ -66,6 +54,10 @@ class SamplePlayerSkillTest extends FlatSpec {
       0.127960974957055
     )
     assert(determineHighestBucket(dist) == 17)
+  }
+
+  "The initial distribution" should "start in the centre of the distribution" in {
+    assert(determineHighestBucket(initSkillDistributionBuckets.toArray) == LocalConfig.skillDistributionBuckets / 2)
   }
 
   "The default player distribution" should "be normalized to one" in {

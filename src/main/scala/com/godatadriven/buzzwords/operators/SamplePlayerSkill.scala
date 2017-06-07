@@ -24,21 +24,9 @@ import com.godatadriven.buzzwords.definitions.Player
 import org.apache.flink.api.common.functions.MapFunction
 import org.slf4j.LoggerFactory
 
+import scala.util.Random
+
 object SamplePlayerSkill {
-  private val numberOfSamples = 220000
-  private val startDistributionMean = 0.5
-  private val startDistributionVar = 0.3
-
-  /*  // Just create an uniform distribution as a starting point :-)
-    def initSkillDistributionBuckets: DenseVector[Double] = {
-      // Sample a gaussian function to obtain a normal distribution
-      val guassian = Gaussian(startDistributionMean, startDistributionVar)
-      val initDistribution = hist(guassian.sample(numberOfSamples), Parameters.skillDistributionBuckets).hist
-
-      val totalSum = sum(initDistribution)
-
-      initDistribution /:/ totalSum
-    }*/
 
   def initSkillDistributionBuckets: DenseVector[Double] = {
     val vec = DenseVector.ones[Double](LocalConfig.skillDistributionBuckets)
@@ -46,6 +34,7 @@ object SamplePlayerSkill {
     // Create a bump in the middle so it will pick at as a starting point
     vec(LocalConfig.skillDistributionBuckets / 2) += 0.1
 
+    // Normalize
     vec /:/ sum(vec)
   }
 
@@ -79,6 +68,7 @@ class SamplePlayerSkill extends MapFunction[Player, (Int, Player, Array[Double])
   }
 
   override def map(player: Player): (Int, Player, Array[Double]) = {
+    val rnd = new Random()
 
     val dist = stateClient match {
       case Some(client) => client.executeQuery(LocalConfig.keyStateName, player.id).getOrElse(
@@ -97,8 +87,11 @@ class SamplePlayerSkill extends MapFunction[Player, (Int, Player, Array[Double])
     // Check which bucket is the highest
     val highestBucket = determineHighestBucket(dist)
 
+    // Add some randomness (either -1, 0, +1) and keep within the bounds
+    val randomizedSkillBucket = Math.max(Math.min(highestBucket + (rnd.nextInt(3) - 1), LocalConfig.skillDistributionBuckets - 1), 0)
+
     // Scale number of skill buckets to queue buckets
-    val queueBucket = mapSkillBucketToQueue(highestBucket)
+    val queueBucket = mapSkillBucketToQueue(randomizedSkillBucket)
 
     (queueBucket, player, dist)
   }

@@ -20,4 +20,6 @@ package com.godatadriven.buzzwords.definitions
 
 import breeze.linalg.DenseVector
 
-case class Team(firstTeam: (Set[Player], DenseVector[Double]), secondTeam: (Set[Player], DenseVector[Double])) extends Definition
+case class Team(firstTeam: (Set[Player], DenseVector[Double]),
+                secondTeam: (Set[Player], DenseVector[Double]),
+                queueBucket: Int) extends Definition
