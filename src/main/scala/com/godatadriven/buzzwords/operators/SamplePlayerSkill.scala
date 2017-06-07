@@ -16,21 +16,18 @@
  * limitations under the License.
  */
 
-  package com.godatadriven.buzzwords.operators
+package com.godatadriven.buzzwords.operators
 
 import breeze.linalg.{DenseVector, sum}
-import breeze.stats._
-import breeze.stats.distributions.Gaussian
-import com.godatadriven.buzzwords.Parameters
 import com.godatadriven.buzzwords.common.{FlinkControl, FlinkSharedStateQueryClient, LocalConfig}
 import com.godatadriven.buzzwords.definitions.Player
 import org.apache.flink.api.common.functions.MapFunction
+import org.slf4j.LoggerFactory
 
 object SamplePlayerSkill {
   private val numberOfSamples = 220000
   private val startDistributionMean = 0.5
   private val startDistributionVar = 0.3
-
 
   /*  // Just create an uniform distribution as a starting point :-)
     def initSkillDistributionBuckets: DenseVector[Double] = {
@@ -44,14 +41,13 @@ object SamplePlayerSkill {
     }*/
 
   def initSkillDistributionBuckets: DenseVector[Double] = {
-    val vec = DenseVector.ones[Double](Parameters.skillDistributionBuckets)
+    val vec = DenseVector.ones[Double](LocalConfig.skillDistributionBuckets)
 
     // Create a bump in the middle so it will pick at as a starting point
-    vec(Parameters.skillDistributionBuckets / 2) += 0.1
+    vec(LocalConfig.skillDistributionBuckets / 2) += 0.1
 
     vec /:/ sum(vec)
   }
-
 
   // Determine the highest bucket of an array of doubles
   def determineHighestBucket(dist: Array[Double]): Int =
@@ -64,25 +60,39 @@ object SamplePlayerSkill {
       )._2 // Take the index of the bucket
 
   def mapSkillBucketToQueue(skillBucket: Int): Int =
-    (skillBucket * (Parameters.queueBuckets.toDouble / Parameters.skillDistributionBuckets.toDouble)).toInt
+    (skillBucket * (LocalConfig.queueBuckets.toDouble / LocalConfig.skillDistributionBuckets.toDouble)).toInt
 }
 
 class SamplePlayerSkill extends MapFunction[Player, (Int, Player, Array[Double])] {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   import SamplePlayerSkill._
 
-  lazy val stateClient = new FlinkSharedStateQueryClient(
-    // TODO: Make some exception handling in case there is no head
-    FlinkControl.getRunningJobs.head
-  )
+  private lazy val stateClient = {
+    val runningJobs = FlinkControl.getRunningJobs
+
+    if (runningJobs.nonEmpty) {
+      Some(new FlinkSharedStateQueryClient(runningJobs.head))
+    } else {
+      None
+    }
+  }
 
   override def map(player: Player): (Int, Player, Array[Double]) = {
 
-    // Check if the player did a game before and we know his skill
-    val dist = stateClient.executeQuery(LocalConfig.keyStateName, player.id).getOrElse(
-      // If there is no skill available, just take a normal distribution
-      initSkillDistributionBuckets.toArray
-    )
+    val dist = stateClient match {
+      case Some(client) => client.executeQuery(LocalConfig.keyStateName, player.id).getOrElse(
+        // If the user hasn't played yet, just take the default distribution
+        initSkillDistributionBuckets.toArray
+      )
+
+      case None => {
+        logger.warn("The shared state client is not available, are you running on a cluster?")
+
+        // If the client not available, take the default distribution
+        initSkillDistributionBuckets.toArray
+      }
+    }
 
     // Check which bucket is the highest
     val highestBucket = determineHighestBucket(dist)

@@ -32,22 +32,22 @@ class SocketHeroesStreamingTest extends FlatSpec {
 
     val dataStream = env.fromCollection[String](List(
       // Assasin
-      """{"player":12,  "character":"Alarak"}""",
-      """{"player":123, "character":"Cassia"}""",
-      """{"player":234, "character":"Chromie"}""",
-      """{"player":345, "character":"Falstad"}""",
+      """{"id":12,  "character":"Alarak"}""",
+      """{"id":123, "character":"Cassia"}""",
+      """{"id":234, "character":"Chromie"}""",
+      """{"id":345, "character":"Falstad"}""",
 
       // Specialists
-      """{"player":456, "character":"Abathur"}""",
-      """{"player":567, "character":"Azmodan"}""",
+      """{"id":456, "character":"Abathur"}""",
+      """{"id":567, "character":"Azmodan"}""",
 
       // Support
-      """{"player":678, "character":"Auriel"}""",
-      """{"player":789, "character":"Brightwing"}""",
+      """{"id":678, "character":"Auriel"}""",
+      """{"id":789, "character":"Brightwing"}""",
 
       // Warrior
-      """{"player":890, "character":"Artanis"}""",
-      """{"player":901, "character":"Arthas"}"""
+      """{"id":890, "character":"Artanis"}""",
+      """{"id":901, "character":"Arthas"}"""
     ))
 
     SocketHeroesStreaming.start(dataStream)

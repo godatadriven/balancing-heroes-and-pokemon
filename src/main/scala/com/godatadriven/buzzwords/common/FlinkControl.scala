@@ -18,10 +18,10 @@
 
 package com.godatadriven.buzzwords.common
 
-import scalaj.http.Http
-
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+
+import scalaj.http.Http
 
 case class FlinkOverviewResponse(running: List[FlinkJob],
                                  finished: List[FlinkJob])

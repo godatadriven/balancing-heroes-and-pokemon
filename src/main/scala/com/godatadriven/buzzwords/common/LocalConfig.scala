@@ -21,6 +21,11 @@ package com.godatadriven.buzzwords.common
 import org.apache.flink.configuration.{Configuration, JobManagerOptions}
 
 object LocalConfig {
+  val keyStateName = "playerSkill"
+  val skillDistributionBuckets = 200
+  val queueBuckets = 1
+  val playersPerMatch = 10
+
   def getFlinkConfig: Configuration = {
     val config = new Configuration()
 
@@ -29,6 +34,4 @@ object LocalConfig {
 
     config
   }
-
-  val keyStateName = "playerSkill"
 }

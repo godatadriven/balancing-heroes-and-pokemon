@@ -67,7 +67,7 @@ object SocketHeroesStreaming {
       // TODO: Maybe see if we can get unique heroes in a team
 
       // Wait until there are ten players in the bucket
-      .countWindow(Parameters.playersPerMatch)
+      .countWindow(LocalConfig.playersPerMatch)
 
       // Determine the two teams of players
       .apply(new DetermineTeam)
@@ -78,8 +78,10 @@ object SocketHeroesStreaming {
       // Map the game into player
       .flatMap(new ComputeNewPlayerSkill)
 
+      // Group by the player id so we get hashed to the correct node
       .keyBy(_.player.id)
 
+      // Save the queryable state
       .asQueryableState(LocalConfig.keyStateName, reduceStateDescriptor)
   }
 }

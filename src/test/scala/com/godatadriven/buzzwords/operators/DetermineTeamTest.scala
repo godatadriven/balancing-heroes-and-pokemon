@@ -24,9 +24,9 @@ class DetermineTeamTest extends FlatSpec {
 
 
   "After combining a team" should "the team skill distribution should be averaged" in {
-//List[((Int, Player, Array[Double]), Int)]
-//    DetermineTeam.computeTeamDistribution(
-//      (1, )
-//    )
+    //List[((Int, Player, Array[Double]), Int)]
+    //    DetermineTeam.computeTeamDistribution(
+    //      (1, )
+    //    )
   }
 }

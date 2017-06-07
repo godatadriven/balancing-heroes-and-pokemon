@@ -27,7 +27,6 @@ import scala.util.Random
 
 
 class PlayerGenerator extends SourceFunction[String] {
-  private val timeout = 50
   private val rand = new Random
 
   override def cancel(): Unit = {
@@ -37,17 +36,15 @@ class PlayerGenerator extends SourceFunction[String] {
   override def run(ctx: SourceFunction.SourceContext[String]): Unit = {
     val heroes = Heroes.heroes.keys.size
 
+    val numberPlayers = 100
+
     while (true) {
-      for (id <- 1 to 2) {
-        val randomIndex = rand.nextInt(heroes)
-        val randomHero = Heroes.heroes.keys.toList(randomIndex)
+      val playerId = rand.nextInt(numberPlayers)
 
-        ctx.collect(JsonUtil.toJson(Player(id, randomHero)))
+      val randomIndex = rand.nextInt(heroes)
+      val randomHero = Heroes.heroes.keys.toList(randomIndex)
 
-        // Throttle it a bit
-        //Thread.sleep(timeout)
-        //      }
-      }
+      ctx.collect(JsonUtil.toJson(Player(playerId, randomHero)))
     }
   }
 }

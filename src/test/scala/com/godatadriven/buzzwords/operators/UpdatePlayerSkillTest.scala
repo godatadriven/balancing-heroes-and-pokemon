@@ -19,14 +19,12 @@
 
 package com.godatadriven.buzzwords.operators
 
-import breeze.linalg.{DenseMatrix, DenseVector}
+import breeze.linalg.{DenseVector, _}
 import org.scalatest.FlatSpec
 
 class UpdatePlayerSkillTest extends FlatSpec {
 
   import UpdatePlayerSkill._
-
-  import breeze.linalg._
 
   "The player skill update step" should "correctly update the player skill distribution" in {
     val playerOne = DenseVector[Double](1.0, 2.0, 3.0)
@@ -59,12 +57,18 @@ class UpdatePlayerSkillTest extends FlatSpec {
 
     val marginalsOne = getMarginals(matOne)
 
-    assert(marginalsOne == (DenseVector(18.0, 12.0, 6.0), DenseVector(6.0, 12.0, 18.0)))
+    assert(marginalsOne == (
+      DenseVector(0.5, 0.3333333333333333, 0.16666666666666666),
+      DenseVector(0.16666666666666666, 0.3333333333333333, 0.5)
+    ))
 
     // The other way around
     val marginalsTwo = getMarginals(matTwo)
 
-    assert(marginalsTwo == (DenseVector(6.0, 12.0, 18.0), DenseVector(18.0, 12.0, 6.0)))
+    assert(marginalsTwo == (
+      DenseVector(0.16666666666666666, 0.3333333333333333, 0.5),
+      DenseVector(0.5, 0.3333333333333333, 0.16666666666666666)
+    ))
   }
 
 
@@ -97,8 +101,6 @@ class UpdatePlayerSkillTest extends FlatSpec {
     val mat = vec1.toDenseMatrix.t * vec2.toDenseMatrix
 
     assert(sum(mat(*, ::)) /:/ sum(sum(mat(*, ::))) == normVec)
-
-
   }
 
 }

@@ -19,8 +19,8 @@
 package com.godatadriven.buzzwords.common
 
 import com.godatadriven.buzzwords.definitions.Definition
-import org.json4s.{DefaultFormats, Extraction}
 import org.json4s.jackson.JsonMethods._
+import org.json4s.{DefaultFormats, Extraction}
 
 object JsonUtil {
   implicit val formats = DefaultFormats

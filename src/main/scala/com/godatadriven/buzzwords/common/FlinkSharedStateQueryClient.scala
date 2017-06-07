@@ -35,8 +35,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, duration}
 
 class FlinkSharedStateQueryClient(jobID: String) {
-  implicit val typeInfo = TypeInformation.of(classOf[Long])
-  implicit val keySerializer = createTypeInformation[Long].createSerializer(new ExecutionConfig)
+  private implicit val typeInfo = TypeInformation.of(classOf[Long])
+  private implicit val keySerializer = createTypeInformation[Long].createSerializer(new ExecutionConfig)
 
   private val client = getQueryableStateClient()
 
@@ -72,6 +72,21 @@ class FlinkSharedStateQueryClient(jobID: String) {
     }
   }
 
+  private def getValueSerializer: TypeSerializer[Array[Double]] =
+    TypeInformation.of(new TypeHint[Array[Double]]() {}).createSerializer(new ExecutionConfig)
+
+  private def getSeralizedKey(key: Long): Array[Byte] = {
+    val serializedKey: Array[Byte] =
+      KvStateRequestSerializer.serializeKeyAndNamespace(
+        key,
+        keySerializer,
+        VoidNamespace.INSTANCE,
+        VoidNamespaceSerializer.INSTANCE
+      )
+
+    serializedKey
+  }
+
   private def getQueryableStateClient(config: Configuration = LocalConfig.getFlinkConfig): QueryableStateClient = {
     val highAvailabilityServices = HighAvailabilityServicesUtils.createHighAvailabilityServices(
       config,
@@ -84,22 +99,6 @@ class FlinkSharedStateQueryClient(jobID: String) {
       highAvailabilityServices
     )
     client
-  }
-
-  private def getValueSerializer: TypeSerializer[Array[Double]] =
-    TypeInformation.of(new TypeHint[Array[Double]]() {}).createSerializer(new ExecutionConfig)
-
-
-  private def getSeralizedKey(key: Long): Array[Byte] = {
-    val serializedKey: Array[Byte] =
-      KvStateRequestSerializer.serializeKeyAndNamespace(
-        key,
-        keySerializer,
-        VoidNamespace.INSTANCE,
-        VoidNamespaceSerializer.INSTANCE
-      )
-
-    serializedKey
   }
 }
 

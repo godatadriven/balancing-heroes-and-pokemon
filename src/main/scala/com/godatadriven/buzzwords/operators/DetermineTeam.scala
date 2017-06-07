@@ -18,20 +18,21 @@
 
 package com.godatadriven.buzzwords.operators
 
-import com.godatadriven.buzzwords.{Heroes, Parameters}
+import breeze.linalg._
+import com.godatadriven.buzzwords.Heroes
+import com.godatadriven.buzzwords.common.LocalConfig
 import com.godatadriven.buzzwords.definitions.{Player, Team}
 import org.apache.flink.streaming.api.scala.function.WindowFunction
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow
 import org.apache.flink.util.Collector
-import breeze.linalg._
 
 object DetermineTeam {
-  private val emptyDist = DenseVector.zeros[Double](Parameters.skillDistributionBuckets)
+  private val emptyDist = DenseVector.zeros[Double](LocalConfig.skillDistributionBuckets)
 
   def computeTeamDistribution(rawTeam: List[(Player, DenseVector[Double])]): (Set[Player], DenseVector[Double]) =
     rawTeam.foldLeft((Set[Player](), emptyDist))((team, player) =>
       (team._1 + player._1, team._2 + (player._2 /:/ rawTeam.size.toDouble))
-    ) // TODO: Normalise to zero
+    )
 }
 
 class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, Int, GlobalWindow] {

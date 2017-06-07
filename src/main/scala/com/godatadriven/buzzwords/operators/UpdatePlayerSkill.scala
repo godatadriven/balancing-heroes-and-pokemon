@@ -18,11 +18,9 @@
 
 package com.godatadriven.buzzwords.operators
 
+import breeze.linalg._
 import com.godatadriven.buzzwords.definitions.UpdateStep
 import org.apache.flink.api.common.functions.FoldFunction
-import org.slf4j.LoggerFactory
-
-import breeze.linalg._
 
 object UpdatePlayerSkill {
 
@@ -43,7 +41,6 @@ object UpdatePlayerSkill {
 }
 
 class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
-  private val logger = LoggerFactory.getLogger(getClass)
 
   import UpdatePlayerSkill._
 
@@ -61,15 +58,13 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
 
     val margins = getMarginals(matPosterior)
 
-
-    //logger.warn("Posterior: " + matPosterior.toArray.mkString(","))
-
     // Check if won
     val nextPlayerSkill = if (value.won) {
       margins._1
     } else {
       margins._2
     }
+
     val prevBucket = SamplePlayerSkill.determineHighestBucket(prevPlayerSkill.toArray)
     val nextBucket = SamplePlayerSkill.determineHighestBucket(nextPlayerSkill.toArray)
 
@@ -79,11 +74,12 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
       s"Player #${value.player.id} has lost, and went from bucket $prevBucket to $nextBucket"
     }
 
-    //  if (List(2, 20, 50, 70, 90).contains(value.player.id)) {
-    println(log)
-    println(prevPlayerSkillAcc.mkString(","))
-
-    //}
+    // Dump it to a file
+    import java.io._
+    val file = new File(s"/tmp/player-${value.player.id}.csv")
+    val bw = new FileWriter(file, true)
+    bw.write(prevPlayerSkill.toArray.mkString(",") + "\n")
+    bw.close()
 
     nextPlayerSkill.toArray
   }
