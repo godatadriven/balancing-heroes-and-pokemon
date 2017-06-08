@@ -19,7 +19,7 @@
 package com.godatadriven.buzzwords.sources
 
 import com.godatadriven.buzzwords.Heroes
-import com.godatadriven.buzzwords.common.JsonUtil
+import com.godatadriven.buzzwords.common.{JsonUtil, LocalConfig}
 import com.godatadriven.buzzwords.definitions.Player
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 
@@ -36,10 +36,10 @@ class PlayerGenerator extends SourceFunction[String] {
   override def run(ctx: SourceFunction.SourceContext[String]): Unit = {
     val heroes = Heroes.heroes.keys.size
 
-    val playerIds = (0 until 100).toList
+    val playerIds = (0 until LocalConfig.numberOfPlayers).toList
 
     // Run 500 games
-    for (_ <- 0 until 500) {
+    for (_ <- 0 until LocalConfig.numberOfRounds) {
       val playerIdsShuffled = util.Random.shuffle(playerIds)
 
       for (playerId <- playerIdsShuffled) {
@@ -49,7 +49,7 @@ class PlayerGenerator extends SourceFunction[String] {
         ctx.collect(JsonUtil.toJson(Player(playerId, randomHero)))
       }
 
-      Thread.sleep(1000)
+      Thread.sleep(1925)
     }
   }
 }

@@ -25,17 +25,28 @@ import org.apache.flink.api.common.functions.MapFunction
 
 object PlayGame {
 
-  def determineScore(players: Iterable[Player]): Double =
+  def determineScoreAvg(players: Set[Player]): Double =
     players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
 
-  def determineWinner(firstTeam: Double, secondTeam: Double): Boolean = firstTeam >= secondTeam
+  def determineScoreMedian(players: Set[Player]): Double =
+    players.toArray.sortBy(_.id).apply(players.size / 2).id.toDouble
+
+  def determineWinner(firstTeam: Set[Player], secondTeam: Set[Player]): Boolean =
+    determineScoreAvg(firstTeam) >= determineScoreAvg(secondTeam)
+
+  def determineWinnerMedian(firstTeam: Set[Player], secondTeam: Set[Player]): Boolean =
+    determineScoreMedian(firstTeam) >= determineScoreMedian(secondTeam)
+
+  def determineWinnerPairwise(firstTeam: Set[Player], secondTeam: Set[Player]): Boolean =
+    firstTeam
+      .toList
+      .sortBy(_.id)
+      .zip(secondTeam.toList.sortBy(_.id))
+      .map(playerPair => if (playerPair._1.id >= playerPair._2.id) 1 else -1).sum >= 0
 
   def playGame(team: Team): Game = {
-    val scoreFirstTeam = determineScore(team.firstTeam._1)
-    val scoreSecondTeam = determineScore(team.secondTeam._1)
-
     //val flip = Math.random() < (scoreA / (scoreA + scoreB))
-    val flip = determineWinner(scoreFirstTeam, scoreSecondTeam)
+    val flip = determineWinner(team.firstTeam._1, team.secondTeam._1)
 
     if (flip) {
       GeneralLogger.log(s"/tmp/player-stats-${team.firstTeam._1.head.id}.csv", "1")

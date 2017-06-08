@@ -58,7 +58,7 @@ object UpdatePlayerSkill {
     loser.toDenseMatrix.t * winner.toDenseMatrix
 
   def cutMatrix(mat: DenseMatrix[Double]): DenseMatrix[Double] = {
-    val posterior = upperTriangular(mat) + 0.000001
+    val posterior = upperTriangular(mat) + 0.00001
     posterior /:/ sum(posterior)
   }
 
@@ -77,7 +77,7 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
   override def fold(prevPlayerSkillAcc: Array[Double], value: UpdateStep): Array[Double] = {
     val prevPlayerSkill = DenseVector[Double](prevPlayerSkillAcc)
 
-    // val opponentDist = createOpponentDistribution(value.opponentDistribution)
+    //val opponentDist = createOpponentDistribution(value.opponentDistribution)
     val opponentDist = value.opponentDistribution
 
     // Build the prior matrix based on the game
@@ -86,7 +86,7 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
     } else {
       getPrior(prevPlayerSkill, opponentDist)
     }
-    
+
     val matPosterior = cutMatrix(matPrior)
     val margins = getMarginals(matPosterior)
 
