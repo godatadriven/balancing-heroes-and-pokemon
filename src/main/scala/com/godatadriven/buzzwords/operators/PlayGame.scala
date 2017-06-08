@@ -18,21 +18,32 @@
 
 package com.godatadriven.buzzwords.operators
 
+import com.godatadriven.buzzwords.common.GeneralLogger
 import com.godatadriven.buzzwords.definitions.{Game, Player, Team}
 import org.apache.flink.api.common.functions.MapFunction
 
 
 object PlayGame {
 
-  private def determineScore(players: Iterable[Player]) =
+  def determineScore(players: Iterable[Player]): Double =
     players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
 
+  def determineWinner(firstTeam: Double, secondTeam: Double): Boolean = firstTeam >= secondTeam
+
   def playGame(team: Team): Game = {
-    val scoreA = determineScore(team.firstTeam._1)
-    val scoreB = determineScore(team.secondTeam._1)
+    val scoreFirstTeam = determineScore(team.firstTeam._1)
+    val scoreSecondTeam = determineScore(team.secondTeam._1)
 
     //val flip = Math.random() < (scoreA / (scoreA + scoreB))
-    val flip = scoreA >= scoreB
+    val flip = determineWinner(scoreFirstTeam, scoreSecondTeam)
+
+    if (flip) {
+      GeneralLogger.log(s"/tmp/player-stats-${team.firstTeam._1.head.id}.csv", "1")
+      GeneralLogger.log(s"/tmp/player-stats-${team.secondTeam._1.head.id}.csv", "-1")
+    } else {
+      GeneralLogger.log(s"/tmp/player-stats-${team.firstTeam._1.head.id}.csv", "-1")
+      GeneralLogger.log(s"/tmp/player-stats-${team.secondTeam._1.head.id}.csv", "1")
+    }
 
     Game(
       // Winning team

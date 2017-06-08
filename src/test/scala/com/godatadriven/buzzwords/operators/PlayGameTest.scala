@@ -19,9 +19,13 @@
 package com.godatadriven.buzzwords.operators
 
 import com.godatadriven.buzzwords.definitions.{Player, Team}
+import org.scalactic.TolerantNumerics
 import org.scalatest.FlatSpec
 
 class PlayGameTest extends FlatSpec {
+
+  val epsilon = 1e-2f
+  private implicit val doubleEq = TolerantNumerics.tolerantDoubleEquality(epsilon)
 
   import PlayGame._
 
@@ -69,5 +73,34 @@ class PlayGameTest extends FlatSpec {
 
     assert(game.winning._1 == winningTeam)
     assert(game.losing._1 == losingTeam)
+  }
+
+  "After forming a team" should "the correct skill level should be calculated" in {
+    val teamScore = determineScore(List(
+      Player(10001, "Alarak"),
+      Player(10002, "Cassia"),
+
+      // Specialists
+      Player(10003, "Azmodan"),
+
+      // Support
+      Player(10004, "Brightwing"),
+
+      // Warriors
+      Player(10005, "Arthas")
+    ))
+
+    assert(teamScore === 0.15)
+
+    val worstPlayerEver = 10000
+    for (playerId <- 1 until 100) {
+      val firstTeamWon = determineWinner(
+        determineScore(List(Player(worstPlayerEver, "Arthas"))),
+        determineScore(List(Player(playerId, "Brightwing")))
+      )
+
+      assert(!firstTeamWon)
+    }
+
   }
 }

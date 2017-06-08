@@ -19,6 +19,7 @@
 package com.godatadriven.buzzwords.operators
 
 import breeze.linalg.{DenseVector, sum}
+import breeze.stats.hist
 import com.godatadriven.buzzwords.common.{FlinkControl, FlinkSharedStateQueryClient, LocalConfig}
 import com.godatadriven.buzzwords.definitions.Player
 import org.apache.flink.api.common.functions.MapFunction
@@ -27,8 +28,19 @@ import org.slf4j.LoggerFactory
 import scala.util.Random
 
 object SamplePlayerSkill {
+  private val g = breeze.stats.distributions.Gaussian(0, 1)
+  private val SAMPLES = 1000000
 
-  def initSkillDistributionBuckets: DenseVector[Double] = {
+  def initSkillDistributionBuckets: DenseVector[Double] = initSkillDistributionBucketsFlat
+
+  def initSkillDistributionBucketsGuass: DenseVector[Double] = {
+    val vec =  hist(g.sample(SAMPLES), LocalConfig.skillDistributionBuckets).hist
+
+    // Normalize
+    vec /:/ sum(vec)
+  }
+
+  def initSkillDistributionBucketsFlat: DenseVector[Double] = {
     val vec = DenseVector.ones[Double](LocalConfig.skillDistributionBuckets)
 
     // Create a bump in the middle so it will pick at as a starting point
@@ -42,11 +54,7 @@ object SamplePlayerSkill {
   def determineHighestBucket(dist: Array[Double]): Int =
     dist
       .zipWithIndex
-      .foldLeft((0.0, 0))(
-        (a, b) =>
-          // Check if the new one is newer
-          if (a._1 < b._1) b else a
-      )._2 // Take the index of the bucket
+      .maxBy(_._1)._2 // Take the index of the bucket
 
   def mapSkillBucketToQueue(skillBucket: Int): Int =
     (skillBucket * (LocalConfig.queueBuckets.toDouble / LocalConfig.skillDistributionBuckets.toDouble)).toInt

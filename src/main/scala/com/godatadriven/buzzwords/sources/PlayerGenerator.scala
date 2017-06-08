@@ -36,15 +36,20 @@ class PlayerGenerator extends SourceFunction[String] {
   override def run(ctx: SourceFunction.SourceContext[String]): Unit = {
     val heroes = Heroes.heroes.keys.size
 
-    val numberPlayers = 99
+    val playerIds = (0 until 100).toList
 
-    while (true) {
-      val playerId = rand.nextInt(numberPlayers)
+    // Run 500 games
+    for (_ <- 0 until 500) {
+      val playerIdsShuffled = util.Random.shuffle(playerIds)
 
-      val randomIndex = rand.nextInt(heroes)
-      val randomHero = Heroes.heroes.keys.toList(randomIndex)
+      for (playerId <- playerIdsShuffled) {
+        val randomIndex = rand.nextInt(heroes)
+        val randomHero = Heroes.heroes.keys.toList(randomIndex)
 
-      ctx.collect(JsonUtil.toJson(Player(playerId, randomHero)))
+        ctx.collect(JsonUtil.toJson(Player(playerId, randomHero)))
+      }
+
+      Thread.sleep(1000)
     }
   }
 }
