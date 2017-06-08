@@ -33,14 +33,8 @@ object DetermineTeam {
     rawTeam.foldLeft((Set[Player](), emptyDist))(
       (team, player) => (team._1 + player._1, team._2 + (player._2 /:/ rawTeam.size.toDouble))
     )
-}
 
-class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, Int, GlobalWindow] {
-
-  import DetermineTeam._
-
-  override def apply(queueBucket: Int, window: GlobalWindow, players: Iterable[(Int, Player, Array[Double])], out: Collector[Team]): Unit = {
-
+  def determineTeam(queueBucket: Int, window: GlobalWindow, players: Iterable[(Int, Player, Array[Double])], out: Collector[Team]): Unit = {
     // Sort the team by the type of character, so we get mixed teams
     val teams = players
       .toList
@@ -56,4 +50,13 @@ class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, I
 
     out.collect(Team(firstTeam, secondTeam, queueBucket))
   }
+
+}
+
+class DetermineTeam extends WindowFunction[(Int, Player, Array[Double]), Team, Int, GlobalWindow] {
+
+  import DetermineTeam._
+
+  override def apply(queueBucket: Int, window: GlobalWindow, players: Iterable[(Int, Player, Array[Double])], out: Collector[Team]): Unit =
+    determineTeam(queueBucket, window, players, out)
 }

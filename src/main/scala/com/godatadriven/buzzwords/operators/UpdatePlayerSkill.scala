@@ -18,13 +18,37 @@
 
 package com.godatadriven.buzzwords.operators
 
-import breeze.linalg._
+import breeze.linalg.{DenseVector, _}
 import breeze.stats._
-import com.godatadriven.buzzwords.common.LocalConfig
 import com.godatadriven.buzzwords.definitions.UpdateStep
 import org.apache.flink.api.common.functions.FoldFunction
 
 object UpdatePlayerSkill {
+  private val g = breeze.stats.distributions.Gaussian(0, 1)
+  private val SAMPLES = 1000000
+
+  private def createOpponentDistribution(dist: DenseVector[Double]): DenseVector[Double] = {
+    val vectorWidth = dist.length
+
+    // From the distribution, get the highest bucket
+    val opponentSkillCenter = SamplePlayerSkill.determineHighestBucket(dist.toArray)
+
+    // Create an empty distribution of ones
+    val bucketDist = DenseVector.ones[Double](vectorWidth)
+
+    // Bucket a gaussian half as wide as the total distribution
+    val normalDist = hist(g.sample(SAMPLES), vectorWidth / 2).hist
+
+    var pos = 0
+    for (idx <- 0 until vectorWidth) {
+      if (idx >= (opponentSkillCenter - (normalDist.length / 2)) && idx < (opponentSkillCenter + (normalDist.length / 2))) {
+        bucketDist(idx) = normalDist(pos)
+        pos = pos + 1
+      }
+    }
+
+    bucketDist /:/ sum(bucketDist)
+  }
 
   def getPrior(loser: DenseVector[Double], winner: DenseVector[Double]): DenseMatrix[Double] =
     loser.toDenseMatrix.t * winner.toDenseMatrix
@@ -42,42 +66,17 @@ object UpdatePlayerSkill {
   }
 }
 
-//val highestBucketOpponent = SamplePlayerSkill.determineHighestBucket(value.opponentDistribution.toArray)
-//val ratio = LocalConfig.skillDistributionBuckets.toDouble / LocalConfig.skillDistributionBuckets.toDouble
-//  val centerBucketQueue = (value.queuebucker * ratio) + (ratio / 2.0)
-
 class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
-  private val SAMPLES = 10000000
 
   import UpdatePlayerSkill._
 
   override def fold(prevPlayerSkillAcc: Array[Double], value: UpdateStep): Array[Double] = {
     val prevPlayerSkill = DenseVector[Double](prevPlayerSkillAcc)
 
-    // Generate a normal distribution, half width of total distribution
-    val bucketDist = DenseVector.ones[Double](LocalConfig.skillDistributionBuckets)
-    val g = breeze.stats.distributions.Gaussian(0, 1)
-    val normalDist = hist(g.sample(SAMPLES), LocalConfig.skillDistributionBuckets / 2).hist
+    val opponentDist = createOpponentDistribution(value.opponentDistribution)
 
-    // Find the centre skill of the other team
-    val opponentSkillCenter = SamplePlayerSkill.determineHighestBucket(value.opponentDistribution.toArray)
-
-    var pos = 0
-    for (idx <- 0 until LocalConfig.skillDistributionBuckets) {
-      if (idx >= (opponentSkillCenter - (normalDist.length / 2)) && idx <= (opponentSkillCenter + (normalDist.length / 2))) {
-        bucketDist(idx) = normalDist(pos)
-        pos = pos + 1
-      }
-    }
-
-    // Normalise it
-    bucketDist /:/ sum(bucketDist)
     // Build the prior matrix based on the game
-    val matPrior = if (value.won) {
-      getPrior(bucketDist, prevPlayerSkill)
-    } else {
-      getPrior(prevPlayerSkill, bucketDist)
-    }
+    val matPrior = getPrior(opponentDist, prevPlayerSkill)
 
     val matPosterior = cutMatrix(matPrior)
     val margins = getMarginals(matPosterior)
@@ -99,7 +98,7 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
     }
     import java.io._
     val bw2 = new FileWriter(new File(s"/tmp/player-update-${value.player.id}.csv"), true)
-    bw2.write(bucketDist.toArray.mkString(",") + "\n")
+    bw2.write(opponentDist.toArray.mkString(",") + "\n")
     bw2.close()
     import java.io._
     val bw = new FileWriter(new File(s"/tmp/player-${value.player.id}.csv"), true)

@@ -20,9 +20,13 @@
 package com.godatadriven.buzzwords.operators
 
 import breeze.linalg.{DenseVector, _}
+import org.scalactic.TolerantNumerics
 import org.scalatest.FlatSpec
 
 class UpdatePlayerSkillTest extends FlatSpec {
+
+  val epsilon = 1e-2f
+  private implicit val doubleEq = TolerantNumerics.tolerantDoubleEquality(epsilon)
 
   import UpdatePlayerSkill._
 
@@ -62,6 +66,10 @@ class UpdatePlayerSkillTest extends FlatSpec {
       DenseVector(0.16666666666666666, 0.3333333333333333, 0.5)
     ))
 
+    // Should be normalized
+    assert(sum(marginalsOne._1) === 1.0)
+    assert(sum(marginalsOne._2) === 1.0)
+
     // The other way around
     val marginalsTwo = getMarginals(matTwo)
 
@@ -69,27 +77,43 @@ class UpdatePlayerSkillTest extends FlatSpec {
       DenseVector(0.16666666666666666, 0.3333333333333333, 0.5),
       DenseVector(0.5, 0.3333333333333333, 0.16666666666666666)
     ))
+
+    // Should be normalized
+    assert(sum(marginalsTwo._1) === 1.0)
+    assert(sum(marginalsTwo._2) === 1.0)
   }
 
+  "The generated distribution" should "conform to some specs" in {
+    val vectorSize = 200
+    val vectorHighestBucket = 22
+
+    val distVector = DenseVector.zeros[Double](vectorSize)
+
+    distVector(vectorHighestBucket) = 0.001 // Set a bump here
+
+    val highestBucket = SamplePlayerSkill.determineHighestBucket(distVector.toArray)
+
+    assert(highestBucket == vectorHighestBucket)
+  }
 
   "After performing the player update step" should "the bucket should increase" in {
-    val losing = SamplePlayerSkill.initSkillDistributionBuckets
+    val losingDistribution = SamplePlayerSkill.initSkillDistributionBuckets
 
-    val prevPlayerSkill = SamplePlayerSkill.initSkillDistributionBuckets
+    val playerPreviousIteration = SamplePlayerSkill.initSkillDistributionBuckets
 
-    val matPrior = getPrior(losing, prevPlayerSkill)
+    val matPrior = getPrior(playerPreviousIteration, losingDistribution)
 
     val matPosterior = cutMatrix(matPrior)
 
     // In case of win
     val nextPlayerSkill = getMarginals(matPosterior)._1
 
-    val prevBucket = SamplePlayerSkill.determineHighestBucket(prevPlayerSkill.toArray)
-    val nextBucket = SamplePlayerSkill.determineHighestBucket(nextPlayerSkill.toArray)
+    val beforeWinning = SamplePlayerSkill.determineHighestBucket(playerPreviousIteration.toArray)
+    val afterWinning = SamplePlayerSkill.determineHighestBucket(nextPlayerSkill.toArray)
 
-    println(s"Went to: $prevBucket -> $nextBucket")
+    println(s"Went to: $beforeWinning -> $afterWinning")
 
-    assert(prevBucket < nextBucket)
+    assert(beforeWinning < afterWinning)
   }
 
   "When constructing the matrix" should "be give the original vectors back" in {

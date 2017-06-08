@@ -23,8 +23,8 @@ import org.json4s.jackson.JsonMethods._
 
 import scalaj.http.Http
 
-case class FlinkOverviewResponse(running: List[FlinkJob],
-                                 finished: List[FlinkJob])
+case class FlinkOverviewResponse(running: List[FlinkJob] = List[FlinkJob](),
+                                 finished: List[FlinkJob] = List[FlinkJob]())
 
 case class FlinkJob(jid: String,
                     name: String,
@@ -50,8 +50,16 @@ object FlinkControl {
   implicit val formats = org.json4s.DefaultFormats
 
   def getRunningJobs: List[String] = {
-    val json = Http("http://localhost:8081/joboverview").asString.body
-    val result = parse(json).extract[FlinkOverviewResponse]
+    val result = try {
+      val json = Http("http://localhost:8081/joboverview").asString.body
+      parse(json).extract[FlinkOverviewResponse]
+    }
+    catch {
+      case e: java.net.ConnectException =>
+        // TODO: Make this nicer
+        // If we have problems with the connection because the JobManager isn't running, just return an empty list
+        FlinkOverviewResponse()
+    }
 
     result.running.map(_.jid)
   }

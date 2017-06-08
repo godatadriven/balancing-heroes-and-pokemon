@@ -21,22 +21,18 @@ package com.godatadriven.buzzwords.operators
 import com.godatadriven.buzzwords.definitions.{Game, Player, Team}
 import org.apache.flink.api.common.functions.MapFunction
 
-// This function simulates the outcome of the game, irl this would be an actual game
-class PlayGame extends MapFunction[Team, Game] {
 
-  override def map(team: Team): Game = {
+object PlayGame {
+
+  private def determineScore(players: Iterable[Player]) =
+    players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
+
+  def playGame(team: Team): Game = {
     val scoreA = determineScore(team.firstTeam._1)
     val scoreB = determineScore(team.secondTeam._1)
 
     //val flip = Math.random() < (scoreA / (scoreA + scoreB))
     val flip = scoreA >= scoreB
-
-    val resultString = if (flip) {
-      s"Win: ${team.firstTeam._1.mkString(",")}, lose: ${team.secondTeam._1.mkString(",")}"
-    } else {
-      s"Win: ${team.secondTeam._1.mkString(",")}, lose: ${team.firstTeam._1.mkString(",")}"
-    }
-    println(resultString)
 
     Game(
       // Winning team
@@ -49,25 +45,12 @@ class PlayGame extends MapFunction[Team, Game] {
       team.queueBucket
     )
   }
+}
 
-  private def determineScore(players: Iterable[Player]) = {
-    // The skill of the player is embedded in the id :-)
-    val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
-    // val playerSkill = players.map(_.id).max
+// This function simulates the outcome of the game, irl this would be an actual game
+class PlayGame extends MapFunction[Team, Game] {
 
-    // Add a bit of randomness
-    playerSkill // + Math.random() / 10
-  }
+  import PlayGame._
 
-  //  private def determineScore(players: Iterable[Player]) = {
-  //    // The skill of the player is embedded in the id :-)
-  //
-  //    // 0.02 + 0.20 + 0.5 + 0.7 + 0.9 + 2.32
-  //
-  //    val playerSkill = players.map(_.id).max
-  //    //val playerSkill = players.map(player => (player.id.toDouble % 100.0) / 100.0).sum
-  //
-  //    // Add a bit of randomness
-  //    playerSkill //+ Math.random() / 10
-  //  }
+  override def map(team: Team): Game = playGame(team)
 }
