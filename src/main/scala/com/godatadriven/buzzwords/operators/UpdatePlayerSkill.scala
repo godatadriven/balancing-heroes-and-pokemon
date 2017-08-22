@@ -58,7 +58,7 @@ object UpdatePlayerSkill {
     loser.toDenseMatrix.t * winner.toDenseMatrix
 
   def cutMatrix(mat: DenseMatrix[Double]): DenseMatrix[Double] = {
-    val posterior = upperTriangular(mat) + 0.000001
+    val posterior = upperTriangular(mat) + LocalConfig.smoothFactor
     posterior /:/ sum(posterior)
   }
 
@@ -74,31 +74,25 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
 
   import UpdatePlayerSkill._
 
-  override def fold(prevPlayerSkillAcc: Array[Double], value: UpdateStep): Array[Double] = {
-    val prevPlayerSkill = DenseVector[Double](prevPlayerSkillAcc)
+  override def fold(currentPlayerSkillAcc: Array[Double], value: UpdateStep): Array[Double] = {
+    val currentPlayerSkill = DenseVector[Double](currentPlayerSkillAcc)
 
-    // val opponentDist = createOpponentDistribution(value.opponentDistribution)
     val opponentDist = value.opponentDistribution
 
-    // Build the prior matrix based on the game
     val matPrior = if (value.won) {
-      getPrior(opponentDist, prevPlayerSkill)
+      getPrior(opponentDist, currentPlayerSkill)
     } else {
-      getPrior(prevPlayerSkill, opponentDist)
+      getPrior(currentPlayerSkill, opponentDist)
     }
-    
+
     val matPosterior = cutMatrix(matPrior)
     val margins = getMarginals(matPosterior)
 
     // Check if won
-    val nextPlayerSkill = if (value.won) {
-      margins._1
-    } else {
-      margins._2
-    }
+    val updatedPlayerSkill = if (value.won) margins._1 else margins._2
 
-    val prevBucket = SamplePlayerSkill.determineHighestBucket(prevPlayerSkill.toArray)
-    val nextBucket = SamplePlayerSkill.determineHighestBucket(nextPlayerSkill.toArray)
+    val prevBucket = SamplePlayerSkill.determineHighestBucket(currentPlayerSkill.toArray)
+    val nextBucket = SamplePlayerSkill.determineHighestBucket(updatedPlayerSkill.toArray)
 
     val log = if (value.won) {
       s"Player #${value.player.id} has won, and went from bucket $prevBucket to $nextBucket"
@@ -107,8 +101,8 @@ class UpdatePlayerSkill extends FoldFunction[UpdateStep, Array[Double]] {
     }
 
     GeneralLogger.log(s"/tmp/player-update-${value.player.id}.csv", opponentDist.toArray.mkString(","))
-    GeneralLogger.log(s"/tmp/player-${value.player.id}.csv", prevPlayerSkill.toArray.mkString(","))
+    GeneralLogger.log(s"/tmp/player-${value.player.id}.csv", currentPlayerSkill.toArray.mkString(","))
 
-    nextPlayerSkill.toArray
+    updatedPlayerSkill.toArray
   }
 }

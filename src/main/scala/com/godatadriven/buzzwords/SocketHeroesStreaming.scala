@@ -53,35 +53,32 @@ object SocketHeroesStreaming {
       TypeInformation.of(new TypeHint[Array[Double]]() {})
     )
 
-    stream
+stream
+  // Parse the JSON to a case class
+  .map(line => JsonUtil.parseJson[Player](line))
 
-      // Parse the JSON to a case class
-      .map(line => JsonUtil.parseJson[Player](line))
+  // Sample the historical skill of the player, if available
+  .map(new SamplePlayerSkill)
 
-      // Sample the historical skill of the player, if available
-      .map(new SamplePlayerSkill)
+  // Take the queue bucket as the key
+  .keyBy(_._1)
 
-      // Take the queue bucket as the key
-      .keyBy(_._1)
+  // Wait until there are ten players in the bucket
+  .countWindow(LocalConfig.playersPerTeam * 2)
 
-      // TODO: Maybe see if we can get unique heroes in a team
+  // Determine the two teams of players
+  .apply(new DetermineTeam)
 
-      // Wait until there are ten players in the bucket
-      .countWindow(LocalConfig.playersPerMatch)
+  // Simulate the actual game, irl this won't be part of the pipeline
+  .map(new PlayGame)
 
-      // Determine the two teams of players
-      .apply(new DetermineTeam)
+  // Map the game into player
+  .flatMap(new ComputeNewPlayerSkill)
 
-      // Play the actual game, this irl this won't be part of the pipeline
-      .map(new PlayGame)
+  // Group by the player id so we get hashed to the correct node
+  .keyBy(_.player.id)
 
-      // Map the game into player
-      .flatMap(new ComputeNewPlayerSkill)
-
-      // Group by the player id so we get hashed to the correct node
-      .keyBy(_.player.id)
-
-      // Save the queryable state
-      .asQueryableState(LocalConfig.keyStateName, reduceStateDescriptor)
+  // Fold the new state into the current state
+  .asQueryableState(LocalConfig.keyStateName, reduceStateDescriptor)
   }
 }

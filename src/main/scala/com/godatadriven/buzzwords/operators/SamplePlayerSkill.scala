@@ -19,6 +19,7 @@
 package com.godatadriven.buzzwords.operators
 
 import breeze.linalg.{DenseVector, sum}
+import breeze.stats.distributions.Beta
 import breeze.stats.hist
 import com.godatadriven.buzzwords.common.{FlinkControl, FlinkSharedStateQueryClient, LocalConfig}
 import com.godatadriven.buzzwords.definitions.Player
@@ -28,13 +29,29 @@ import org.slf4j.LoggerFactory
 import scala.util.Random
 
 object SamplePlayerSkill {
+
   private val g = breeze.stats.distributions.Gaussian(0, 1)
   private val SAMPLES = 1000000
 
-  def initSkillDistributionBuckets: DenseVector[Double] = initSkillDistributionBucketsFlat
+  def initSkillDistributionBuckets: DenseVector[Double] = initSkillDistributionBucketsBeta
 
   def initSkillDistributionBucketsGuass: DenseVector[Double] = {
-    val vec =  hist(g.sample(SAMPLES), LocalConfig.skillDistributionBuckets).hist
+    val vec = hist(g.sample(SAMPLES), LocalConfig.skillDistributionBuckets).hist
+
+    // Normalize
+    vec /:/ sum(vec)
+  }
+
+  def initSkillDistributionBucketsBeta: DenseVector[Double] = {
+    val rnd = new Random(System.currentTimeMillis())
+
+    val beta = new Beta(1.0 + (rnd.nextDouble() * 1.5), 1.0 + (rnd.nextDouble() * 1.5))
+
+    val vec = DenseVector[Double](
+      (0 until LocalConfig.skillDistributionBuckets)
+        .map(_.toDouble / LocalConfig.skillDistributionBuckets)
+        .map(number => beta.dist(number)).toArray
+    )
 
     // Normalize
     vec /:/ sum(vec)
@@ -95,12 +112,11 @@ class SamplePlayerSkill extends MapFunction[Player, (Int, Player, Array[Double])
     // Check which bucket is the highest
     val highestBucket = determineHighestBucket(dist)
 
-    // Add some randomness (either -1, 0, +1) and keep within the bounds
-    val randomizedSkillBucket = Math.max(Math.min(highestBucket + (rnd.nextInt(3) - 1), LocalConfig.skillDistributionBuckets - 1), 0)
-
     // Scale number of skill buckets to queue buckets
-    val queueBucket = mapSkillBucketToQueue(randomizedSkillBucket)
+    val queueBucket = mapSkillBucketToQueue(highestBucket)
 
-    (queueBucket, player, dist)
+    val finalBucket = Math.max(Math.min(queueBucket + (rnd.nextInt(3) - 1), LocalConfig.queueBuckets), 0)
+
+    (finalBucket, player, dist)
   }
 }

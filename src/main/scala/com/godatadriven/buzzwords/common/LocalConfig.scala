@@ -23,8 +23,10 @@ import org.apache.flink.configuration.{Configuration, JobManagerOptions}
 object LocalConfig {
   val keyStateName = "playerSkill"
   val skillDistributionBuckets = 100
-  val queueBuckets = 1
-  val playersPerMatch = 2
+  val queueBuckets = 8
+  val playersPerTeam = 5
+  val smoothFactor = 0.000001
+  val numPlayer = 1000
 
   def getFlinkConfig: Configuration = {
     val config = new Configuration()
