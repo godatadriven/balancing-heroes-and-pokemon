@@ -31,12 +31,15 @@ import scala.util.Random
 object SamplePlayerSkill {
 
   private val g = breeze.stats.distributions.Gaussian(0, 1)
-  private val SAMPLES = 1000000
+  private val SAMPLES = 10000000
 
-  def initSkillDistributionBuckets: DenseVector[Double] = initSkillDistributionBucketsBeta
+  def initSkillDistributionBuckets: DenseVector[Double] = initSkillDistributionBucketsGuass
 
   def initSkillDistributionBucketsGuass: DenseVector[Double] = {
     val vec = hist(g.sample(SAMPLES), LocalConfig.skillDistributionBuckets).hist
+
+    // Make a small bump in the center, so we start always in the center
+    vec(LocalConfig.skillDistributionBuckets / 2) += 1.0 / vec.length
 
     // Normalize
     vec /:/ sum(vec)

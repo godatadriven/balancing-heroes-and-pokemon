@@ -56,8 +56,13 @@ class SamplePlayerSkillTest extends FlatSpec {
     assert(determineHighestBucket(dist) == 17)
   }
 
+  // We want to allow a bit of noise, this add a sniff of randomness to the
+  // initial step
+  val allowedSkew = 2
   "The initial distribution" should "start in the centre of the distribution" in {
-    assert(determineHighestBucket(initSkillDistributionBuckets.toArray) == LocalConfig.skillDistributionBuckets / 2)
+    val center = LocalConfig.skillDistributionBuckets / 2
+    assert(determineHighestBucket(initSkillDistributionBuckets.toArray) >= center - allowedSkew)
+    assert(determineHighestBucket(initSkillDistributionBuckets.toArray) <= center + allowedSkew)
   }
 
   "The default player distribution" should "be normalized to one" in {
