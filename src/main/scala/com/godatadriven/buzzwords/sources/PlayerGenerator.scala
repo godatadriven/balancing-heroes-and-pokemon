@@ -33,12 +33,16 @@ class PlayerGenerator extends SourceFunction[String] {
 
   }
 
+  // Add some sleeping, because the generator is so fast, it will clog up all the queue's
+  // In a real life situation the source will not be as fast as here
+  private val sleep = 1000
+
   override def run(ctx: SourceFunction.SourceContext[String]): Unit = {
     val heroes = Heroes.heroes.keys.size
 
     val playerIds = (0 until LocalConfig.numPlayer).toList
 
-    // Run 500 games
+    // Simulate 500 games
     for (_ <- 0 until 500) {
       val playerIdsShuffled = util.Random.shuffle(playerIds)
 
@@ -49,7 +53,7 @@ class PlayerGenerator extends SourceFunction[String] {
         ctx.collect(JsonUtil.toJson(Player(playerId, randomHero)))
       }
 
-      Thread.sleep(1000)
+      Thread.sleep(sleep)
     }
   }
 }

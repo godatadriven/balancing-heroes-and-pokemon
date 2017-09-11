@@ -31,7 +31,7 @@ import scala.util.Random
 object SamplePlayerSkill {
 
   private val g = breeze.stats.distributions.Gaussian(0, 1)
-  private val SAMPLES = 10000000
+  private val SAMPLES = 1000000
 
   def initSkillDistributionBuckets: DenseVector[Double] = initSkillDistributionBucketsGuass
 

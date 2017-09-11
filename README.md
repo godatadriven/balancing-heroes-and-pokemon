@@ -19,8 +19,9 @@ The skill estimation algorithm can in part be found described on Vincent's blog:
 We need to run in cluster mode because we used Flink's queryable state.
 
 ```
-FLINK_HOME=/Users/fokkodriesprong/Downloads/flink-1.3.2
-APP_HOME=`pwd`
+export FLINK_TM_HEAP=4g
+export FLINK_HOME=/Users/fokkodriesprong/Downloads/flink-1.3.2
+export APP_HOME=`pwd`
 $FLINK_HOME/bin/flink run $APP_HOME/target/scala-2.11/tru-scale.jar
 ```
 
